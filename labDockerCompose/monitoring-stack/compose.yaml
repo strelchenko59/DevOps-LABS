@@ -1,0 +1,46 @@
+services:
+  # Prometheus - система мониторинга и сбора метрик
+  prometheus:
+    image: prom/prometheus:latest  # Используем официальный образ Prometheus
+    container_name: prometheus      # Задаем имя контейнера для удобства
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'  # Путь к конфигурационному файлу внутри контейнера
+    ports:
+      - 9090:9090  # Пробрасываем порт 9090 для доступа к веб-интерфейсу Prometheus
+    restart: unless-stopped  # Автоматический перезапуск контейнера, если он остановился (кроме случая, когда остановлен вручную)
+    volumes:
+      # Монтируем локальную папку с конфигами внутрь контейнера
+      # Позволяет изменять конфигурацию без пересборки образа
+      - ./prometheus:/etc/prometheus
+      # Создаем том для хранения данных Prometheus
+      # Данные не потеряются при пересоздании контейнера
+      - prom_data:/prometheus
+
+  # Grafana - визуализация метрик и создание дашбордов
+  grafana:
+    image: grafana/grafana:latest  # Официальный образ Grafana
+    container_name: grafana
+    ports:
+      - 3000:3000  # Порт для доступа к веб-интерфейсу Grafana (по умолчанию 3000)
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin      # Логин администратора Grafana
+      - GF_SECURITY_ADMIN_PASSWORD=grafana # Пароль администратора Grafana
+    volumes:
+      # Монтируем директорию для автоматической настройки источников данных
+      # Позволяет автоматически добавлять Prometheus как источник данных
+      - ./grafana:/etc/grafana/provisioning/datasources
+      # Том для хранения данных Grafana (дашборды, настройки и т.д.)
+      - grafana_data:/var/lib/grafana
+
+  # Blackbox Exporter - мониторинг доступности эндпоинтов (HTTP, HTTPS, TCP, ICMP)
+  blackbox:
+    image: prom/blackbox-exporter:latest  # Официальный образ Blackbox Exporter
+    container_name: blackbox
+    ports:
+      - 9115:9115  # Порт для метрик и веб-интерфейса Blackbox Exporter
+
+# Определяем именованные тома для хранения данных
+volumes:
+  prom_data:    # Том для данных Prometheus
+  grafana_data: # Том для данных Grafana
